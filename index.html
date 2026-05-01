@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Print Advisor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: #0a0a0f;
+      min-height: 100vh;
+      color: #e8e4d8;
+      overflow-x: hidden;
+    }
+
+    .pa-grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,120,40,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,120,40,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .pa-accent-orb {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,90,20,0.08) 0%, transparent 70%);
+      top: -100px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .pa-content {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    .pa-header { margin-bottom: 48px; }
+
+    .pa-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: #ff5a14;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .pa-title {
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1.0;
+      color: #f0ece0;
+      margin: 0 0 8px;
+    }
+
+    .pa-title span { color: #ff5a14; }
+
+    .pa-subtitle {
+      font-size: 15px;
+      color: #7a7468;
+      margin: 16px 0 0;
+      font-weight: 400;
+      max-width: 520px;
+      line-height: 1.6;
+    }
+
+    .pa-divider {
+      width: 48px;
+      height: 2px;
+      background: #ff5a14;
+      margin: 24px 0;
+    }
+
+    .pa-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .pa-card:hover { border-color: rgba(255,90,20,0.2); }
+
+    .pa-card-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: #ff5a14;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .pa-card-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f0ece0;
+      margin-bottom: 8px;
+    }
+
+    .pa-card-desc {
+      font-size: 13px;
+      color: #6a6660;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .pa-textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #e8e4d8;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      padding: 14px 16px;
+      resize: vertical;
+      min-height: 100px;
+      transition: border-color 0.2s;
+      outline: none;
+      line-height: 1.6;
+    }
+
+    .pa-textarea:focus {
+      border-color: rgba(255,90,20,0.5);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .pa-textarea::placeholder { color: #3d3b37; }
+
+    .pa-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .pa-slider-label-left {
+      font-size: 11px;
+      color: #4a4845;
+      font-family: 'Space Mono', monospace;
+      min-width: 64px;
+      text-align: right;
+    }
+
+    .pa-slider-label-right {
+      font-size: 11px;
+      color: #4a4845;
+      font-family: 'Space Mono', monospace;
+      min-width: 64px;
+    }
+
+    .pa-range {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .pa-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff5a14;
+      border: 3px solid #0a0a0f;
+      box-shadow: 0 0 0 1px #ff5a14;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .pa-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .pa-range::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff5a14;
+      border: 3px solid #0a0a0f;
+      cursor: pointer;
+    }
+
+    .pa-value-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff5a14;
+      min-width: 24px;
+      text-align: center;
+    }
+
+    .pa-value-bar {
+      display: flex;
+      gap: 4px;
+      margin-top: 10px;
+    }
+
+    .pa-value-bar-dot {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      transition: background 0.2s;
+    }
+
+    .pa-value-bar-dot.active { background: #ff5a14; }
+
+    .pa-submit-btn {
+      width: 100%;
+      padding: 18px;
+      background: #ff5a14;
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: transform 0.15s, background 0.15s;
+      margin-top: 8px;
+    }
+
+    .pa-submit-btn:hover { background: #ff7840; transform: translateY(-1px); }
+    .pa-submit-btn:active { transform: translateY(0); }
+
+    /* Loading */
+    .pa-loading {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .pa-loading-ring {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,90,20,0.15);
+      border-top-color: #ff5a14;
+      animation: pa-spin 0.9s linear infinite;
+      margin-bottom: 28px;
+    }
+
+    @keyframes pa-spin { to { transform: rotate(360deg); } }
+
+    .pa-loading-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .pa-loading-step {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: #3a3835;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.4s;
+    }
+
+    .pa-loading-step.active { color: #ff5a14; }
+    .pa-loading-step.done { color: #4a4845; }
+
+    .pa-loading-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: #3a3835;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* Result */
+    .pa-result {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    .pa-result-inner {
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .pa-result-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: #4a4845;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .pa-material-badge {
+      font-size: 88px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .pa-material-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 32px;
+    }
+
+    .pa-material-desc {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #7a7468;
+      margin-bottom: 40px;
+      text-align: left;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .pa-score-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+
+    .pa-score-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pa-score-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      min-width: 44px;
+      color: #6a6660;
+    }
+
+    .pa-score-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .pa-score-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pa-reset-btn {
+      background: transparent;
+      color: #ff5a14;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid rgba(255,90,20,0.3);
+      border-radius: 8px;
+      padding: 12px 28px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .pa-reset-btn:hover {
+      background: rgba(255,90,20,0.08);
+      border-color: rgba(255,90,20,0.6);
+    }
+
+    .pa-fade-in { animation: pa-fadein 0.5s ease both; }
+
+    @keyframes pa-fadein {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="pa-grid-bg"></div>
+  <div class="pa-accent-orb"></div>
+
+  <!-- FORM -->
+  <div class="pa-content" id="pa-form-view">
+    <div class="pa-header">
+      <div class="pa-eyebrow">Material Selector v1.0</div>
+      <h1 class="pa-title">3D Print<br><span>Advisor</span></h1>
+      <div class="pa-divider"></div>
+      <p class="pa-subtitle">Tell us about your project and rank your priorities. We'll recommend the right filament for the job.</p>
+    </div>
+
+    <div class="pa-card">
+      <div class="pa-card-label">Step 01</div>
+      <div class="pa-card-title">Describe your project</div>
+      <div class="pa-card-desc">What are you building? This helps us log and classify your design for future improvements.</div>
+      <textarea class="pa-textarea" id="pa-description" placeholder="e.g. Outdoor weather station enclosure that needs to survive UV exposure and temperature swings..."></textarea>
+    </div>
+
+    <div class="pa-card">
+      <div class="pa-card-label">Step 02</div>
+      <div class="pa-card-title">How important is low cost?</div>
+      <div class="pa-card-desc">Rate how much you want to minimize material spend. Higher = budget is a top concern.</div>
+      <div class="pa-slider-row">
+        <span class="pa-slider-label-left">Not at all</span>
+        <input type="range" min="1" max="5" value="3" step="1" class="pa-range" id="pa-cost" oninput="paUpdate('cost', this.value)">
+        <span class="pa-slider-label-right">Critical</span>
+        <span class="pa-value-pill" id="pa-cost-val">3</span>
+      </div>
+      <div class="pa-value-bar" id="pa-cost-bar"></div>
+    </div>
+
+    <div class="pa-card">
+      <div class="pa-card-label">Step 03</div>
+      <div class="pa-card-title">How important is strength &amp; durability?</div>
+      <div class="pa-card-desc">Rate how critical mechanical toughness is. Parts under load, stress, or impact score high here.</div>
+      <div class="pa-slider-row">
+        <span class="pa-slider-label-left">Decorative</span>
+        <input type="range" min="1" max="5" value="3" step="1" class="pa-range" id="pa-strength" oninput="paUpdate('strength', this.value)">
+        <span class="pa-slider-label-right">Structural</span>
+        <span class="pa-value-pill" id="pa-strength-val">3</span>
+      </div>
+      <div class="pa-value-bar" id="pa-strength-bar"></div>
+    </div>
+
+    <div class="pa-card">
+      <div class="pa-card-label">Step 04</div>
+      <div class="pa-card-title">How harsh is the environment?</div>
+      <div class="pa-card-desc">Will the part face UV, moisture, heat, or chemicals? Rate how demanding the operating conditions are.</div>
+      <div class="pa-slider-row">
+        <span class="pa-slider-label-left">Indoor / mild</span>
+        <input type="range" min="1" max="5" value="3" step="1" class="pa-range" id="pa-adverse" oninput="paUpdate('adverse', this.value)">
+        <span class="pa-slider-label-right">Extreme</span>
+        <span class="pa-value-pill" id="pa-adverse-val">3</span>
+      </div>
+      <div class="pa-value-bar" id="pa-adverse-bar"></div>
+    </div>
+
+    <button class="pa-submit-btn" onclick="paSubmit()">
+      Analyze &amp; Recommend Material →
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="pa-loading" id="pa-loading-view" style="display:none">
+    <div class="pa-loading-ring"></div>
+    <div class="pa-loading-steps">
+      <div class="pa-loading-step" id="ls-0">Parsing project parameters</div>
+      <div class="pa-loading-step" id="ls-1">Running material matrix</div>
+      <div class="pa-loading-step" id="ls-2">Applying weighting algorithm</div>
+      <div class="pa-loading-step" id="ls-3">Cross-referencing filament database</div>
+      <div class="pa-loading-step" id="ls-4">Generating recommendation</div>
+    </div>
+    <div class="pa-loading-label">Processing...</div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="pa-result" id="pa-result-view" style="display:none">
+    <div class="pa-result-inner">
+      <div class="pa-result-eyebrow">Recommended filament</div>
+      <div class="pa-material-badge" id="pa-mat-badge"></div>
+      <div class="pa-material-name" id="pa-mat-name"></div>
+      <div class="pa-material-desc" id="pa-mat-desc"></div>
+      <div class="pa-score-bars" id="pa-score-bars"></div>
+      <button class="pa-reset-btn" onclick="paReset()">← Start over</button>
+    </div>
+  </div>
+
+  <script>
+    const MATERIALS = {
+      PLA: {
+        label: 'Polylactic Acid',
+        color: '#6ab5a0',
+        desc: "PLA is your best match. It's the most affordable and beginner-friendly filament available, offering excellent print quality and a wide range of colors. Best suited for indoor prototypes, display models, and low-stress parts where budget matters most. Not recommended for outdoor use or high-load mechanical applications."
+      },
+      ABS: {
+        label: 'Acrylonitrile Butadiene Styrene',
+        color: '#ff5a14',
+        desc: "ABS is your best match. It delivers superior mechanical strength, impact resistance, and heat tolerance — making it ideal for structural components, enclosures, and load-bearing parts. Requires an enclosure or heated chamber to print well and produces fumes, so good ventilation is essential."
+      },
+      PETG: {
+        label: 'Polyethylene Terephthalate Glycol',
+        color: '#e8b84b',
+        desc: "PETG is your best match. It strikes an excellent balance of strength and environmental resilience, with natural resistance to moisture, UV exposure, and mild chemicals. Ideal for outdoor fixtures, food-safe containers, and parts that need to survive demanding conditions without breaking the bank on engineering-grade filament."
+      }
+    };
+
+    const API_BASE = 'http://localhost:3001';
+
+    function paUpdate(field, val) {
+      document.getElementById(`pa-${field}-val`).textContent = val;
+      const bar = document.getElementById(`pa-${field}-bar`);
+      bar.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'pa-value-bar-dot' + (i <= val ? ' active' : '');
+        bar.appendChild(dot);
+      }
+    }
+
+    ['cost', 'strength', 'adverse'].forEach(f => paUpdate(f, 3));
+
+    function paRecommend(cost, strength, adverse) {
+      const scores = { ABS: strength * 3, PLA: cost * 2, PETG: adverse * 1 };
+      const winner = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+      return { winner, scores };
+    }
+
+    function paSubmit() {
+      const desc = document.getElementById('pa-description').value.trim();
+      if (!desc) {
+        const ta = document.getElementById('pa-description');
+        ta.focus();
+        ta.style.borderColor = 'rgba(255,90,20,0.6)';
+        setTimeout(() => ta.style.borderColor = '', 2000);
+        return;
+      }
+
+      const cost = parseInt(document.getElementById('pa-cost').value);
+      const strength = parseInt(document.getElementById('pa-strength').value);
+      const adverse = parseInt(document.getElementById('pa-adverse').value);
+
+      document.getElementById('pa-form-view').style.display = 'none';
+      document.getElementById('pa-loading-view').style.display = 'flex';
+
+      const steps = document.querySelectorAll('.pa-loading-step');
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i > 0) { steps[i-1].classList.remove('active'); steps[i-1].classList.add('done'); }
+        if (i < steps.length) steps[i].classList.add('active');
+        i++;
+        if (i > steps.length) clearInterval(interval);
+      }, 380);
+
+      const { winner, scores } = paRecommend(cost, strength, adverse);
+
+      fetch(`${API_BASE}/api/recommend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectDescription: desc,
+          costPriority: cost,
+          strengthPriority: strength,
+          adverseEnvironmentPriority: adverse
+        })
+      }).catch(() => {});
+
+      setTimeout(() => showResult(winner, scores), 2200);
+    }
+
+    function showResult(winner, scores) {
+      document.getElementById('pa-loading-view').style.display = 'none';
+      document.getElementById('pa-result-view').style.display = 'flex';
+
+      const mat = MATERIALS[winner];
+      const badge = document.getElementById('pa-mat-badge');
+      badge.textContent = winner;
+      badge.style.color = mat.color;
+
+      const nameEl = document.getElementById('pa-mat-name');
+      nameEl.textContent = mat.label;
+      nameEl.style.color = mat.color;
+
+      document.getElementById('pa-mat-desc').textContent = mat.desc;
+
+      const maxScore = Math.max(...Object.values(scores));
+      const barsEl = document.getElementById('pa-score-bars');
+      barsEl.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:0.18em;color:#3a3835;text-transform:uppercase;margin-bottom:4px;">Analysis breakdown</div>';
+
+      Object.entries(scores).sort((a, b) => b[1] - a[1]).forEach(([m, s]) => {
+        const pct = Math.round((s / maxScore) * 100);
+        const c = MATERIALS[m].color;
+        const row = document.createElement('div');
+        row.className = 'pa-score-row pa-fade-in';
+        row.innerHTML = `
+          <span class="pa-score-label">${m}</span>
+          <div class="pa-score-track">
+            <div class="pa-score-fill" style="width:0%;background:${c}" data-pct="${pct}"></div>
+          </div>
+        `;
+        barsEl.appendChild(row);
+      });
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.querySelectorAll('.pa-score-fill').forEach(el => {
+          el.style.width = el.dataset.pct + '%';
+        });
+      }));
+    }
+
+    function paReset() {
+      document.getElementById('pa-result-view').style.display = 'none';
+      document.getElementById('pa-form-view').style.display = 'block';
+      document.getElementById('pa-description').value = '';
+      ['cost', 'strength', 'adverse'].forEach(f => {
+        document.getElementById(`pa-${f}`).value = 3;
+        paUpdate(f, 3);
+      });
+    }
+  </script>
+</body>
+</html>
